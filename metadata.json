@@ -1,0 +1,5 @@
+{
+  "name": "Tennis Doubles Score & Stat Tracker - Vid",
+  "description": "An application for tracking the score and detailed individual player statistics in a doubles tennis match. Track winners, aces, and errors for each player to analyze performance.",
+  "requestFramePermissions": []
+}
