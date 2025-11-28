@@ -56,17 +56,50 @@ const getPointScoreString = (state: GameState) => {
 
 
 // Helper function to apply the point outcome to the score
-const applyPoint = (state: GameState, winningTeamId: number): GameState => {
+const applyPoint = (state: GameState, winningTeamId: number, pointLogTemplate: PointLog): GameState => {
     const newState = { ...state };
     
     const winningTeam = winningTeamId === 1 ? newState.team1 : newState.team2;
     const losingTeam = winningTeamId === 1 ? newState.team2 : newState.team1;
 
     winningTeam.points += 1;
+    
+    // --- DETERMINE SCORE STRING FOR LOG ---
+    // We calculate the score string based on the incremented points BEFORE game reset logic.
+    let logScore = '';
+    
+    // Check for game/tiebreak win just for string generation purposes first
+    let isGameWinningPoint = false;
+    
+    if (newState.isTieBreak) {
+        const targetPoints = newState.currentSet === 2 ? 10 : 7;
+        isGameWinningPoint = winningTeam.points >= targetPoints && winningTeam.points - losingTeam.points >= 2;
+        // For tiebreaks, usually we show the points even on the winning point (e.g. 7-5)
+        logScore = `${newState.team1.points}-${newState.team2.points}`;
+        if (isGameWinningPoint) logScore += " (Set)";
+    } else {
+        const pointsToWin = 4;
+        isGameWinningPoint = winningTeam.points >= pointsToWin && winningTeam.points - losingTeam.points >= 2;
+        
+        if (isGameWinningPoint) {
+            logScore = "Game";
+        } else {
+            logScore = getPointScoreString(newState);
+        }
+    }
+
+    pointLogTemplate.score = logScore;
+    pointLogTemplate.id = newState.pointHistory.length;
+    newState.pointHistory.push(pointLogTemplate);
+
+
+    // --- GAME/SET LOGIC ---
 
     if (newState.isTieBreak) {
-        // --- SUPER TIEBREAK LOGIC ---
-        const tiebreakWon = winningTeam.points >= 10 && winningTeam.points - losingTeam.points >= 2;
+        // --- TIEBREAK LOGIC ---
+        const targetPoints = newState.currentSet === 2 ? 10 : 7;
+        const tiebreakWon = winningTeam.points >= targetPoints && winningTeam.points - losingTeam.points >= 2;
+        
         if (tiebreakWon) {
             winningTeam.games[newState.currentSet]++;
             newState.matchOver = true;
@@ -170,6 +203,11 @@ const gameReducer = (state: GameState, action: Action): GameState => {
     
     case 'SET_FIRST_SERVER': {
         const { serverId } = action.payload;
+        
+        // If it's a tiebreak set (e.g. Super Tiebreak), we need to select the full order immediately
+        // because we don't have a "Change ends/server after Game 1" pause.
+        const isTieBreakStart = state.isTieBreak;
+
         return {
             ...state,
             serveOrder: [serverId], // Temporarily store just the first server
@@ -177,7 +215,8 @@ const gameReducer = (state: GameState, action: Action): GameState => {
             serveOrderIndex: 0,
             team1: { ...state.team1, isServing: serverId < 2 },
             team2: { ...state.team2, isServing: serverId >= 2 },
-            pointState: 'scoring'
+            // If tiebreak, go to selecting second server immediately. Else score normally (Game 1).
+            pointState: isTieBreakStart ? 'selectingSecondServer' : 'scoring'
         }
     }
 
@@ -198,13 +237,18 @@ const gameReducer = (state: GameState, action: Action): GameState => {
             secondServerPartnerId,
         ];
         
+        // If Tiebreak, we start at index 0 (First Server starts the tiebreak).
+        // If Regular Set, we are confirming for Game 2, so we start at index 1 (Second Server starts Game 2).
+        const nextIndex = state.isTieBreak ? 0 : 1; 
+        const nextServerId = serveOrder[nextIndex];
+        
         return {
             ...state,
             serveOrder,
-            serveOrderIndex: 1, // We are now at the second server in the order.
-            serverIndex: secondServerId, // The selected player is the new server.
-            team1: { ...state.team1, isServing: secondServerId < 2 },
-            team2: { ...state.team2, isServing: secondServerId >= 2 },
+            serveOrderIndex: nextIndex, 
+            serverIndex: nextServerId, 
+            team1: { ...state.team1, isServing: nextServerId < 2 },
+            team2: { ...state.team2, isServing: nextServerId >= 2 },
             pointState: 'scoring'
         }
     }
@@ -223,8 +267,8 @@ const gameReducer = (state: GameState, action: Action): GameState => {
         newState.stats[server.id].firstServesTotal++;
 
         const pointLog: PointLog = {
-            id: newState.pointHistory.length,
-            score: getPointScoreString(newState),
+            id: 0, // Set in applyPoint
+            score: '', // Set in applyPoint
             description: '',
             set: newState.currentSet,
             pointWinnerId: 1, // Placeholder
@@ -244,8 +288,7 @@ const gameReducer = (state: GameState, action: Action): GameState => {
             newState.stats[server.id].winners++;
             pointLog.pointWinnerId = serverTeamId;
             pointLog.description = `Ace by ${server.name}`;
-            newState.pointHistory.push(pointLog);
-            return applyPoint(newState, serverTeamId);
+            return applyPoint(newState, serverTeamId, pointLog);
         } else { // Double Fault
             newState.stats[server.id].secondServesTotal++;
             newState.stats[server.id].doubleFaults++;
@@ -253,8 +296,7 @@ const gameReducer = (state: GameState, action: Action): GameState => {
             const receiverTeamId = server.id < 2 ? 2 : 1;
             pointLog.pointWinnerId = receiverTeamId;
             pointLog.description = `Double Fault by ${server.name}`;
-            newState.pointHistory.push(pointLog);
-            return applyPoint(newState, receiverTeamId);
+            return applyPoint(newState, receiverTeamId, pointLog);
         }
     }
     
@@ -325,8 +367,8 @@ const gameReducer = (state: GameState, action: Action): GameState => {
         }
 
         const pointLog: PointLog = {
-            id: newState.pointHistory.length,
-            score: getPointScoreString(newState),
+            id: 0, // Set in applyPoint
+            score: '', // Set in applyPoint
             description: pointDescription,
             set: newState.currentSet,
             pointWinnerId: winningTeamId,
@@ -344,9 +386,8 @@ const gameReducer = (state: GameState, action: Action): GameState => {
                 isReturnEvent: isReturnEvent,
             },
         };
-        newState.pointHistory.push(pointLog);
 
-        return applyPoint(newState, winningTeamId);
+        return applyPoint(newState, winningTeamId, pointLog);
     }
 
     case 'CANCEL_POINT': {
@@ -360,8 +401,10 @@ const gameReducer = (state: GameState, action: Action): GameState => {
     
     case 'UNDO_LAST_POINT': {
       if (state.history.length === 0) return state;
-      // This works because saveToHistory stringifies the state, making it immutable.
-      return state.history[state.history.length - 1];
+      // Reconstruct the previous state with its history intact
+      const previousState = state.history[state.history.length - 1];
+      const previousHistory = state.history.slice(0, -1);
+      return { ...previousState, history: previousHistory };
     }
     
     case 'RESET_STATE': {

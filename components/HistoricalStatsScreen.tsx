@@ -484,6 +484,7 @@ const HistoricalStatsScreen: React.FC<HistoricalStatsScreenProps> = ({ match, on
                                    <li key={log.id} className="p-3 flex justify-between items-center hover:bg-court-bg-light transition-colors group">
                                        <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1">
+                                                <span className="mr-2 text-secondary-text font-mono text-xs">#{log.id + 1}</span>
                                                 <span className="font-mono font-bold text-tennis-ball">{log.score}</span>
                                                 <span className="text-xs text-secondary-text bg-court-lines px-1 rounded">{side} Side</span>
                                                 <span className="text-xs text-secondary-text">Set {log.set + 1}</span>
