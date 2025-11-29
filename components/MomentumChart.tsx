@@ -80,8 +80,8 @@ const MomentumChart: React.FC<MomentumChartProps> = ({ match }) => {
 
     // Chart Dimensions
     const width = 600;
-    const height = 250;
-    const margin = { top: 30, right: 30, bottom: 40, left: 50 };
+    const height = 280; // Increased height
+    const margin = { top: 30, right: 30, bottom: 50, left: 50 }; // Increased bottom margin
     const chartWidth = width - margin.left - margin.right;
     const chartHeight = height - margin.top - margin.bottom;
 
@@ -126,7 +126,7 @@ const MomentumChart: React.FC<MomentumChartProps> = ({ match }) => {
                     <text x={10} y={-15} fill="#c5f542" fontSize="12" fontWeight="bold">
                         ▲ {team1.players.map(p => p.name.split(' ')[0]).join('/')}
                     </text>
-                    <text x={10} y={chartHeight + 25} fill="#e2e8f0" fontSize="12" fontWeight="bold">
+                    <text x={10} y={chartHeight + 35} fill="#e2e8f0" fontSize="12" fontWeight="bold">
                         ▼ {team2.players.map(p => p.name.split(' ')[0]).join('/')}
                     </text>
 

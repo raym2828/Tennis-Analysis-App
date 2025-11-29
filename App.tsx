@@ -150,8 +150,8 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-court-bg font-sans p-4 flex flex-col items-center">
-      <header className="w-full max-w-4xl text-center mb-6">
+    <div className="min-h-screen bg-court-bg font-sans p-4 flex flex-col">
+      <header className="w-full text-center mb-6">
         <h1 className="text-3xl md:text-4xl font-bold text-tennis-ball cursor-pointer" onClick={() => {
           if (view !== 'match') setView('home')
         }}>
@@ -160,7 +160,7 @@ const App: React.FC = () => {
         <p className="text-secondary-text mt-1">Advanced stats, player profiles, and match history.</p>
       </header>
       
-      <main className="w-full max-w-5xl flex-grow">
+      <main className="w-full flex-grow px-2 lg:px-6">
         {error && (
             <div className="bg-red-500 text-white p-3 rounded-md mb-4 text-center font-semibold">
                 Error: {error}

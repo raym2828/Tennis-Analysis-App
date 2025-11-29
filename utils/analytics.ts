@@ -9,6 +9,31 @@ export const createEmptyStats = (): PlayerStats => ({
     pointsWon: 0, pointsLost: 0,
 });
 
+export const getServeSideFromScore = (score: string, isTieBreak: boolean): 'Deuce' | 'Ad' => {
+    if (score === 'Deuce') return 'Deuce';
+    if (score === 'Ad-In' || score === 'Ad-Out') return 'Ad';
+    if (score === 'Game') return 'Deuce'; // Default to deuce for game end calc if needed, though usually not called
+
+    const parts = score.split('-');
+    if (parts.length !== 2) return 'Deuce'; 
+
+    // Standard Point Map
+    const pointMap: Record<string, number> = { '0': 0, '15': 1, '30': 2, '40': 3, 'Ad': 3 }; // Treat Ad as 3 for modulo parity check if needed, but Ad is handled above
+    
+    let p1 = 0, p2 = 0;
+
+    if (isTieBreak) {
+        p1 = parseInt(parts[0]);
+        p2 = parseInt(parts[1]);
+        if (isNaN(p1) || isNaN(p2)) return 'Deuce';
+    } else {
+        p1 = pointMap[parts[0]] ?? 0;
+        p2 = pointMap[parts[1]] ?? 0;
+    }
+    
+    return (p1 + p2) % 2 === 0 ? 'Deuce' : 'Ad';
+};
+
 export const recalculateStatsFromHistory = (pointHistory: PointLog[], allPlayers: Player[]): Record<string, PlayerStats> => {
     const playerStats: Record<string, PlayerStats> = {};
     allPlayers.forEach(p => {
@@ -288,18 +313,6 @@ export const parseMatchCSV = async (text: string, existingProfiles: PlayerProfil
     // Handle the very last point
     if (rowsWithWinner.length > 0) {
         const last = rowsWithWinner[rowsWithWinner.length - 1];
-        // If the match is imported, it's likely finished, so the last point probably won a game.
-        // However, without an explicit 'Game Over' marker, we assume the last action concluded a game 
-        // IF the user exported a finished match. If it was mid-game, this might be off by 1.
-        // Heuristic: If the last score isn't 'Game Point' logic, we can't be sure, but let's assume 
-        // for a "Match Record" it is complete.
-        
-        // To be safe, we only increment if the logic dictates (e.g. was Game Point).
-        // Since we lack that detailed state, we will optimistically increment if it looks like a win.
-        // But for safety in this "Viewer" mode, let's just rely on the accumulation above + 1 potential pending.
-        
-        // Actually, the loop above only adds a game when it sees the *next* point start at 0-0.
-        // So we must account for the final game completion.
         if (last.winner === 1) team1Games[currentSet]++;
         else team2Games[currentSet]++;
     }

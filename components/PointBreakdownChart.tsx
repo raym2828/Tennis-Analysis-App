@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { MatchRecord, PlayerStats } from '../types';
 
@@ -21,8 +22,8 @@ const PointBreakdownChart: React.FC<PointBreakdownChartProps> = ({ match, team1S
     ];
     
     const width = 500;
-    const height = 200;
-    const margin = { top: 20, right: 20, bottom: 50, left: 40 };
+    const height = 250; // Increased height
+    const margin = { top: 20, right: 20, bottom: 60, left: 40 }; // Increased bottom margin
     const chartWidth = width - margin.left - margin.right;
     const chartHeight = height - margin.top - margin.bottom;
 
@@ -94,7 +95,7 @@ const PointBreakdownChart: React.FC<PointBreakdownChartProps> = ({ match, team1S
                                 {/* Team Label */}
                                 <text 
                                     x={(barWidth*2 + 5)/2} 
-                                    y={chartHeight + 20} 
+                                    y={chartHeight + 25} 
                                     textAnchor="middle" 
                                     fill="#a0aec0" 
                                     fontSize="12"
